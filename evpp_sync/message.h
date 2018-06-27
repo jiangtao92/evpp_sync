@@ -49,7 +49,7 @@ namespace jpp {
         // 反序列化
         bool read(const evpp::slice &s)
         {
-            evpp::Buffer buf;   // fix me: 零时对象
+            evpp::Buffer buf;				// fix me: 临时对象
             buf.Append(s.data(), s.size());
 
             return read(buf);

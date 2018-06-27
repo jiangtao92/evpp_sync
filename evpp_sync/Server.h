@@ -14,21 +14,21 @@
 
 namespace jpp {
     class Server {
-    public:
-        typedef std::function<jpp::response(jpp::message*)> MessageCallback;
-        typedef std::function<void(const evpp::TCPConnPtr &)> ConnectionCallback;
-
+		
+	public:
         Server(const std::string & listen_addr /*ip:port*/, const std::string &name, uint32_t thread_num);
 
         ~Server();
 
         bool Start();
 
-        void SetMessageCallback(const MessageCallback &cb) { messageCallback_ = cb; };
+		bool Stop();
+
+        void SetMessageCallback(const RequestCallback &cb) { messageCallback_ = cb; };
 
         void SetConnectionCallback(const ConnectionCallback &cb) { connectionCallback_ = cb; };
 
-        Status Send(evpp::Buffer *req, evpp::Buffer *resp, uint32_t timeout = 0);
+        //Status Send(evpp::Buffer *req, evpp::Buffer *resp, uint32_t timeout = 0);
 
     private:
         void onMessage(const evpp::TCPConnPtr&, jpp::message * message);
@@ -41,8 +41,8 @@ namespace jpp {
         evpp::EventLoopThread loop_;
         evpp::TCPServer server_;
         LengthHeaderCodec codec_;
-        MessageCallback messageCallback_;
-        ConnectionCallback connectionCallback_;
+		RequestCallback messageCallback_;
+		ConnectionCallback connectionCallback_;
 
         // 只支持单连接的情况
         evpp::TCPConnPtr client_;

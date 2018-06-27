@@ -20,10 +20,6 @@
 namespace jpp {
 
     class Client : private disable_copy {
-        
-    public:
-        typedef std::function<jpp::response(jpp::message*)> RequestCallback;
-        typedef std::function<void(const evpp::TCPConnPtr&)> ConnectionCallback;
 
     public:
         Client(std::string const &addr, uint16_t port);
@@ -35,6 +31,8 @@ namespace jpp {
         void Stop();
 
         Status Send(evpp::Buffer *req, evpp::Buffer *resp, uint32_t timeout = 0);
+
+		Status Send(const evpp::Slice &s, evpp::Buffer *resp, uint32_t timeout = 0);
 
         void setRequestCallback(const RequestCallback &cb) { requestcallback_ = cb; };
 

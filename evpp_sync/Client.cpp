@@ -23,8 +23,8 @@ namespace jpp {
         client_.SetMessageCallback(std::bind(&LengthHeaderCodec::OnMessage, &codec_, placeholders::_1, placeholders::_2));
     }
 
-    Client::~Client() {
-
+    Client::~Client() 
+	{
         Stop();
     }
 
@@ -60,6 +60,19 @@ namespace jpp {
         }
         return ret;
     }
+
+	Status Client::Send(const evpp::Slice &s, evpp::Buffer *bufResp, uint32_t timeout /* = 0 */)
+	{
+		requestPtr req = std::make_shared<request>(get_next_idx(), true, timeout);
+		req->setBuffer(s); // memcpy
+		response resp;
+		auto ret = SendSync(req, resp);
+		if (Status::sSucceed == ret)
+		{
+			bufResp->Append(resp.getBuffer()); // memcpy
+		}
+		return ret;
+	}
 
     //////////////////////////////////////////////////////////////////////////
     // private
