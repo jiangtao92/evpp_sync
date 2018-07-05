@@ -15,7 +15,9 @@ namespace jpp {
 	class message {
 
 	public:
-        message() : type_(kRequest), session_(0), reqidx_(0), buffer_() {};
+        message() : type_(kRequest), session_(0), reqidx_(0), buffer_(new evpp::Buffer()) {};
+
+		virtual ~message() { if (buffer_) delete buffer_; }
 
         message(const message &msg)
         {
@@ -32,7 +34,11 @@ namespace jpp {
             type_ = msg.type_;
             session_ = msg.session_;
             reqidx_ = msg.reqidx_;
-            setBuffer(msg.buffer_);
+			if (!buffer_) {
+				buffer_ = new evpp::Buffer();
+			}
+			setBuffer(*msg.buffer_);
+
             return *this;
         }
 
@@ -41,8 +47,9 @@ namespace jpp {
             type_ = msg.type_;
             session_ = msg.session_;
             reqidx_ = msg.reqidx_;
-            setBuffer(std::move(msg.buffer_));
-
+			if (buffer_) delete buffer_;
+			buffer_ = msg.buffer_;
+			msg.buffer_ = nullptr;
             return *this;
         }
 
@@ -62,7 +69,7 @@ namespace jpp {
             buf.AppendInt8(static_cast<int8_t>(type_));
             buf.AppendInt32(session_);
             buf.AppendInt32(reqidx_);
-            buf.Append(buffer_.data(), buffer_.size()); // 一次memcopy
+            buf.Append(buffer_->data(), buffer_->size()); // 一次memcopy
         }
 
         MessageType getType() const { return type_; };
@@ -72,11 +79,12 @@ namespace jpp {
         int32_t getReqidx() const { return reqidx_; };
         void setReqidx(int32_t reqidx) { reqidx_ = reqidx; };
 
-        const evpp::slice getBuffer() const { return evpp::slice(buffer_.data(), buffer_.size()); };
-        void setBuffer(const evpp::Buffer &buffer) { buffer_.Reset(); buffer_.Append(buffer.data(), buffer.size()); };
-        void setBuffer(const evpp::Slice &s) { buffer_.Reset(); buffer_.Append(s.data(), s.size()); }
-        void setBuffer(evpp::Buffer &&buffer) { buffer_.Swap(buffer); }
-        void appendBuffer(const evpp::Buffer &buffer) { buffer_.Append(buffer.data(), buffer.size()); };
+		// import: slice的有效时间
+        const evpp::slice getBuffer() const { return evpp::slice(buffer_->data(), buffer_->size()); };
+        void setBuffer(const evpp::Buffer &buffer) { buffer_->Reset(); buffer_->Append(buffer.data(), buffer.size()); };
+        void setBuffer(const evpp::Slice &s) { buffer_->Reset(); buffer_->Append(s.data(), s.size()); }
+        void setBuffer(evpp::Buffer &&buffer) { buffer_->Swap(buffer); }
+        void appendBuffer(const evpp::Buffer &buffer) { buffer_->Append(buffer.data(), buffer.size()); };
 
     private:
         bool read(evpp::Buffer &buf)
@@ -98,7 +106,7 @@ namespace jpp {
             buf.Skip(sizeof(session_));
             reqidx_ = buf.PeekInt32();
             buf.Skip(sizeof(reqidx_));
-            buffer_.Swap(buf);  // 直接使用,减少内存拷贝
+            buffer_->Swap(buf);  // 直接使用,减少内存拷贝
 
             return true;
         }
@@ -107,7 +115,9 @@ namespace jpp {
 		MessageType     type_;      // 消息类型
         int32_t         session_;   // 会话编号
         int32_t         reqidx_;    // 消息编号
-        evpp::Buffer    buffer_;    // 消息传递的内容 // fix me : 修改成指针表示,存在拷贝风险
+        //evpp::Buffer    buffer_;    // 消息传递的内容 // fix me : 修改成指针表示,存在拷贝风险
+
+		evpp::Buffer	*buffer_{nullptr};
 
         const static int tag_ = 0x6a707470;
         const static int headerSize = sizeof(tag_) + sizeof(MessageType) + sizeof(int32_t) * 2;
